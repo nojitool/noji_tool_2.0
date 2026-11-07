@@ -425,10 +425,10 @@
       }
       .tool-card {
         display: grid;
-        grid-template-columns: minmax(190px, 1fr) minmax(190px, 0.8fr) auto;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 0.95fr);
         align-items: center;
         gap: 20px;
-        min-height: 104px;
+        min-height: 112px;
         padding: 18px 20px;
         border: 1px solid #e9edf3;
         border-radius: 16px;
@@ -456,6 +456,8 @@
         }
       }
       .tool-main {
+        display: grid;
+        gap: 11px;
         min-width: 0;
       }
       .tool-title-row {
@@ -483,9 +485,9 @@
         white-space: nowrap;
       }
       .tool-kind {
-        margin: 7px 0 0 47px;
         color: #97a0af;
         font-size: 11px;
+        white-space: nowrap;
       }
       .tool-meta {
         display: flex;
@@ -510,25 +512,27 @@
         white-space: nowrap;
       }
       .card-actions {
-        display: flex;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-        gap: 7px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        width: 100%;
       }
       .action {
+        width: 100%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         vertical-align: middle;
         line-height: 1.25;
         min-height: 34px;
-        padding: 0 11px;
+        padding: 0 6px;
         border: 1px solid transparent;
         border-radius: 9px;
         background: #f0f3fb;
         color: #344b82;
         font-size: 11px;
         font-weight: 700;
+        white-space: nowrap;
         transition: 0.18s;
         text-decoration: none;
       }
@@ -649,7 +653,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 15px;
-        padding: 17px 21px;
+        padding: 12px 21px;
         border-bottom: 1px solid var(--line);
       }
       .modal-heading {
@@ -840,17 +844,17 @@
           padding-right: 30px;
         }
         .tool-card {
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 10px 15px;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 14px;
         }
         .tool-meta {
-          grid-column: 1;
-          grid-row: 2;
-          margin-left: 47px;
+          grid-column: auto;
+          grid-row: auto;
+          margin-left: 0;
         }
         .card-actions {
-          grid-column: 2;
-          grid-row: 1 / span 2;
+          grid-column: auto;
+          grid-row: auto;
         }
       }
       @media (max-width: 680px) {
@@ -964,8 +968,9 @@
           justify-content: flex-start;
         }
         .action {
-          min-height: 36px;
-          padding: 0 12px;
+          min-height: 40px;
+          padding: 0 4px;
+          font-size: clamp(9px, 2.6vw, 11px);
         }
         .modal-backdrop {
           align-items: flex-end;
@@ -1043,7 +1048,7 @@
           <section class="hero">
             <div>
               <p class="eyebrow notice">
-                お客様へのこのサイトのURLおよびパスワードの公開は禁止です
+                お客様へのこのサイトのURLの公開は禁止です
               </p>
             </div>
             <div class="hero-mark" aria-hidden="true">N.</div>
@@ -1087,15 +1092,13 @@
       <section
         class="modal"
         id="modal"
+        tabindex="-1"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modalTitle"
       >
         <header class="modal-head">
           <h2 class="modal-heading" id="modalTitle"></h2>
-          <button class="icon-button" id="modalClose" aria-label="閉じる">
-            ×
-          </button>
         </header>
         <div class="modal-body" id="modalBody"></div>
         <footer class="modal-foot" id="modalFoot"></footer>
@@ -1325,11 +1328,14 @@
           <div class="tool-main"><div class="tool-title-row">
             <span class="type-icon">${escapeHtml(ext.slice(0, 4))}</span>
             <span class="tool-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
-          </div><div class="tool-kind">${isFile ? `${escapeHtml(ext)} ファイル` : "Webサイト"}</div></div>
-          <div class="tool-meta"><span class="tag">${escapeHtml(item.category)}</span>
-            <span class="date">更新 ${escapeHtml(prettyDate(item.updatedAt))}</span></div>
+          </div>
+          <div class="tool-meta">
+            <span class="tag">${escapeHtml(item.category)}</span>
+            <span class="tool-kind">${isFile ? `${escapeHtml(ext)} ファイル` : "Webサイト"}</span>
+            <span class="date">更新 ${escapeHtml(prettyDate(item.updatedAt))}</span>
+          </div></div>
           <div class="card-actions">
-            ${isFile ? "" : `<button class="action" data-action="edit" data-id="${escapeHtml(item.id)}">編集</button>`}
+            <button class="action" data-action="edit" data-id="${escapeHtml(item.id)}">編集</button>
             <button class="action" data-action="preview" data-id="${escapeHtml(item.id)}">プレビュー</button>
             <a class="action primary" data-action="open" data-id="${escapeHtml(item.id)}"
               href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">開く ↗</a>
@@ -1353,7 +1359,7 @@
         $("#modalFoot").innerHTML = footer;
         $("#modalBackdrop").classList.add("open");
         document.body.style.overflow = "hidden";
-        $("#modalClose").focus();
+        $("#modal").focus();
       }
       function closeModal() {
         $("#modalBackdrop").classList.remove("open");
@@ -1386,6 +1392,19 @@
         <button class="action" id="cancelModal">キャンセル</button>
         <button class="action primary" id="saveLink">${editing ? "変更を確定" : "登録する"}</button>`;
         openModal(editing ? "URLを編集" : "Webツールを追加", body, footer);
+      }
+      function openFileEditInfo(item) {
+        const body = `<div class="form-grid">
+          <p>この資料ファイルはGitHubリポジトリで管理されています。この画面からファイルや登録情報を直接変更することはできません。</p>
+          <div class="field"><label>分類</label><div class="share-url">${escapeHtml(item.category)}</div></div>
+          <div class="field"><label>ファイルの場所</label><div class="share-url">${escapeHtml(item.url)}</div></div>
+          <p>変更する場合はリポジトリ内のファイルと<code>files/catalog.json</code>を編集してください。</p>
+        </div>`;
+        openModal(
+          "ファイル資料の編集方法",
+          body,
+          '<button class="action primary" id="cancelModal">閉じる</button>',
+        );
       }
       function showToast(message) {
         const toast = $("#toast");
@@ -1628,9 +1647,11 @@
         if (!item) return;
         if (button.dataset.action === "preview") preview(item);
         if (button.dataset.action === "share") share(item);
-        if (button.dataset.action === "edit") openEditor(item);
+        if (button.dataset.action === "edit") {
+          if (item.type === "file") openFileEditInfo(item);
+          else openEditor(item);
+        }
       });
-      $("#modalClose").addEventListener("click", closeModal);
       $("#modalBackdrop").addEventListener("click", (event) => {
         if (event.target === $("#modalBackdrop")) closeModal();
         if (event.target.closest("#cancelModal")) closeModal();
