@@ -324,7 +324,7 @@
         justify-content: space-between;
         gap: 24px;
         align-items: flex-end;
-        margin-bottom: 30px;
+        margin-bottom: 10px;
       }
       .eyebrow {
         margin: 0 0 11px;
@@ -334,7 +334,7 @@
         letter-spacing: 0.18em;
       }
       .eyebrow.notice {
-        margin: 0 0 28px;
+        margin: 0;
         padding: 16px 19px;
         border: 1px solid #f0d7d9;
         border-radius: 13px;
@@ -857,6 +857,16 @@
           grid-row: auto;
         }
       }
+      @media (orientation: landscape) and (min-width: 921px) and (max-width: 1366px) and (pointer: coarse) {
+        .tool-card {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 14px;
+        }
+        .card-actions {
+          grid-column: auto;
+          grid-row: auto;
+        }
+      }
       @media (max-width: 680px) {
         .topbar {
           height: 64px;
@@ -942,7 +952,7 @@
           padding: 31px 17px 55px;
         }
         .hero {
-          margin-bottom: 23px;
+          margin-bottom: 8px;
         }
         .hero-desc {
           max-width: 270px;
@@ -1512,11 +1522,12 @@
             $("#qrModeNote").textContent =
               "長いURLのため、QRコードを読み取るとこのサイト経由で目的のページを開きます。";
           }
-        } catch {
+        } catch (error) {
+          console.error("QR code generation failed:", error);
           const box = $("#qrBox");
           if (box)
             box.innerHTML =
-              '<div class="qr-fallback">このURLはQRコードに収まりません。リンクをコピーして共有してください。</div>';
+              '<div class="qr-fallback">QRコードを作成できませんでした。ページとassets/qrcode.jsが最新版か確認してください。下のリンクをコピーして共有できます。</div>';
         }
       }
       function askConfirmation(
