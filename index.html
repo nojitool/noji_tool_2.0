@@ -742,7 +742,7 @@
       }
       .qr-layout {
         display: grid;
-        grid-template-columns: 230px minmax(0, 1fr);
+        grid-template-columns: 380px minmax(0, 1fr);
         align-items: center;
         gap: 25px;
         padding: 10px 4px;
@@ -750,16 +750,18 @@
       .qr-box {
         display: grid;
         place-items: center;
-        width: 230px;
-        min-height: 230px;
-        padding: 13px;
+        width: min(100%, 380px);
+        aspect-ratio: 1;
+        padding: 15px;
         border: 1px solid #ebeff5;
         border-radius: 16px;
         background: #fff;
       }
       .qr-box img {
         display: block;
-        max-width: 100%;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
         image-rendering: pixelated;
       }
       .qr-fallback {
@@ -789,6 +791,12 @@
           SFMono-Regular,
           Menlo,
           monospace;
+      }
+      .qr-mode-note {
+        margin: 10px 0 0;
+        color: #7c8799;
+        font-size: 11px;
+        line-height: 1.7;
       }
       .toast {
         position: fixed;
@@ -1000,7 +1008,7 @@
     <div class="boot" id="boot" aria-label="サイトを起動しています">
       <div class="boot-inner">
         <img class="boot-logo" src="logo_login.png" alt="Nojima Tool Hub" />
-        <div class="boot-caption">TOOL HUB を準備しています</div>
+        <div class="boot-caption">Noji tool を読み込んでいます</div>
       </div>
     </div>
     <div class="shell">
@@ -1424,6 +1432,27 @@
          <button class="action" id="cancelModal">閉じる</button>`,
         );
       }
+      function createQrDataUri(value) {
+        const code = qrcode(0, "L");
+        code.addData(value, "Byte");
+        code.make();
+        const modules = code.getModuleCount();
+        const margin = 4;
+        let path = "";
+        for (let row = 0; row < modules; row += 1) {
+          for (let col = 0; col < modules; col += 1) {
+            if (code.isDark(row, col))
+              path += `M${col + margin},${row + margin}h1v1h-1z`;
+          }
+        }
+        const size = modules + margin * 2;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">
+          <path fill="#fff" d="M0 0h${size}v${size}H0z"/>
+          <path fill="#14213d" d="${path}"/>
+        </svg>`;
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      }
       function share(item) {
         const target =
           item.type === "file"
@@ -1432,38 +1461,38 @@
         const body = `<div class="qr-layout"><div class="qr-box" id="qrBox"><div class="qr-fallback">QRコードを準備しています…</div></div>
         <div class="share-copy"><h3>お客様へお渡し</h3>
           <p>${item.type === "file" ? "QRコードからファイルを開き、必要に応じてダウンロードできます。" : "QRコードからWebサイトを開けます。"}</p>
-          <div class="share-url">${escapeHtml(target)}</div></div></div>`;
+          <div class="share-url">${escapeHtml(target)}</div>
+          <p id="qrModeNote" class="qr-mode-note"></p></div></div>`;
         openModal(
           "QRコードで共有",
           body,
           `<button class="action" id="copyShare">リンクをコピー</button><button class="action primary" id="cancelModal">閉じる</button>`,
         );
         try {
-          const code = qrcode(0, "M");
-          code.addData(target, "Byte");
-          code.make();
-          const modules = code.getModuleCount();
-          const margin = 4;
-          let path = "";
-          for (let row = 0; row < modules; row += 1) {
-            for (let col = 0; col < modules; col += 1) {
-              if (code.isDark(row, col))
-                path += `M${col + margin},${row + margin}h1v1h-1z`;
-            }
+          let qrSrc;
+          let usedRedirect = false;
+          try {
+            qrSrc = createQrDataUri(target);
+          } catch (error) {
+            if (item.type !== "url" || !item.id) throw error;
+            const redirect = new URL(location.href);
+            redirect.search = "";
+            redirect.hash = "";
+            redirect.searchParams.set("open", item.id);
+            qrSrc = createQrDataUri(redirect.href);
+            usedRedirect = true;
           }
-          const size = modules + margin * 2;
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">
-            <path fill="#fff" d="M0 0h${size}v${size}H0z"/>
-            <path fill="#14213d" d="${path}"/>
-          </svg>`;
           const img = document.createElement("img");
           img.alt = "共有先のQRコード";
-          img.width = 202;
-          img.height = 202;
-          img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+          img.width = 350;
+          img.height = 350;
+          img.src = qrSrc;
           const box = $("#qrBox");
           if (box) box.replaceChildren(img);
+          if (usedRedirect) {
+            $("#qrModeNote").textContent =
+              "長いURLのため、QRコードを読み取るとこのサイト経由で目的のページを開きます。";
+          }
         } catch {
           const box = $("#qrBox");
           if (box)
@@ -1543,6 +1572,37 @@
           syncing: "連携中",
           offline: "オフライン",
         }[state];
+      }
+      function redirectSharedUrlFromQr() {
+        const id = new URL(location.href).searchParams.get("open");
+        if (!id) return;
+        if (!/^[A-Za-z0-9_-]{1,80}$/.test(id)) {
+          showToast("共有リンクの形式が正しくありません。");
+          return;
+        }
+        let unsubscribe = () => {};
+        unsubscribe = onValue(
+          ref(database, `sharedTools/${id}`),
+          (snapshot) => {
+            const destination = safeUrl(snapshot.val()?.url);
+            if (destination) {
+              unsubscribe();
+              location.replace(destination);
+            } else if (!snapshot.exists()) {
+              unsubscribe();
+              showToast(
+                "共有先が見つかりません。リンクが削除された可能性があります。",
+              );
+            }
+          },
+          (error) => {
+            console.error("QR redirect lookup failed:", error);
+            setConnectionState("offline");
+            showToast(
+              "共有先を読み込めません。インターネット接続を確認してください。",
+            );
+          },
+        );
       }
 
       $("#categoryNav").addEventListener("click", (event) => {
@@ -1663,6 +1723,7 @@
       render();
       loadFiles();
       subscribeToFirebase();
+      redirectSharedUrlFromQr();
       window.setTimeout(() => $("#boot").classList.add("done"), 2800);
     </script>
   </body>
