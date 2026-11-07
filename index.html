@@ -1027,7 +1027,7 @@
               <span>＋</span> URLを新規追加
             </button>
             <p class="local-note">
-              URLの登録内容はこのブラウザ内に保存されます。共有設定は後日連携予定です。
+              URL登録はFirebaseに保存され、利用端末間で共有されます。
             </p>
           </div>
         </aside>
@@ -1097,7 +1097,44 @@
 
     <script src="assets/qrcode.js"></script>
     <script src="assets/qrcode_UTF8.js"></script>
-    <script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+      import {
+        getAnalytics,
+        isSupported,
+      } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-analytics.js";
+      import {
+        getDatabase,
+        ref,
+        onValue,
+        push,
+        set,
+        remove,
+      } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAcqan0AOd6ZKJS894EqFCHT-MbnEi_Ksk",
+        authDomain: "noji-tool.firebaseapp.com",
+        databaseURL: "https://noji-tool-default-rtdb.firebaseio.com/",
+        projectId: "noji-tool",
+        storageBucket: "noji-tool.firebasestorage.app",
+        messagingSenderId: "884736199678",
+        appId: "1:884736199678:web:9f6e9b34d70af886304eaf",
+        measurementId: "G-WJ5GR0MVDD",
+      };
+      const firebaseApp = initializeApp(firebaseConfig);
+      const database = getDatabase(firebaseApp);
+      const sharedToolsRef = ref(database, "sharedTools");
+      const connectionRef = ref(database, ".info/connected");
+      try {
+        if (await isSupported()) getAnalytics(firebaseApp);
+      } catch (error) {
+        console.info(
+          "Firebase Analytics is unavailable in this browser.",
+          error,
+        );
+      }
+
       const CATEGORIES = ["すべて", "家電", "季節AV", "情報", "通信"];
       const ICONS = {
         すべて: "▦",
@@ -1113,11 +1150,14 @@
         情報: "tech_logo.png",
         通信: "net_logo.png",
       };
-      const STORAGE_KEY = "noji-tool-hub-links-v1";
       let selectedCategory = "すべて";
       let activeModalItem = null;
       let toastTimer;
       let fileItems = [];
+      let sharedLinks = [];
+      let databaseConnected = null;
+      let initialDataLoaded = false;
+      let firebaseReadError = false;
       const $ = (selector) => document.querySelector(selector);
 
       function escapeHtml(value) {
@@ -1139,20 +1179,84 @@
           .toLocaleLowerCase("ja");
       }
       function readLinks() {
-        try {
-          const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-          return Array.isArray(value)
-            ? value.filter((item) => item && item.type === "url")
-            : [];
-        } catch {
-          return [];
-        }
+        return sharedLinks;
       }
-      function saveLinks(items) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      async function saveFirebaseLink(record, existingId = null) {
+        setConnectionState("syncing");
+        const recordRef = existingId
+          ? ref(database, `sharedTools/${existingId}`)
+          : push(sharedToolsRef);
+        const savedRecord = { ...record, id: recordRef.key };
+        await set(recordRef, savedRecord);
+        return savedRecord;
+      }
+      async function deleteFirebaseLink(id) {
+        setConnectionState("syncing");
+        await remove(ref(database, `sharedTools/${id}`));
       }
       function allItems() {
         return [...fileItems, ...readLinks()];
+      }
+      function subscribeToFirebase() {
+        onValue(
+          connectionRef,
+          (snapshot) => {
+            databaseConnected = snapshot.val() === true;
+            refreshConnectionState();
+          },
+          (error) => {
+            console.error("Firebase connection status error:", error);
+            databaseConnected = false;
+            refreshConnectionState();
+          },
+        );
+        onValue(
+          sharedToolsRef,
+          (snapshot) => {
+            const value = snapshot.val() || {};
+            sharedLinks = Object.entries(value)
+              .map(([key, item]) => ({
+                ...item,
+                id: String(key),
+                type: "url",
+              }))
+              .filter(
+                (item) =>
+                  item.title &&
+                  item.url &&
+                  CATEGORIES.includes(item.category) &&
+                  item.category !== "すべて",
+              );
+            initialDataLoaded = true;
+            firebaseReadError = false;
+            render();
+            refreshConnectionState();
+          },
+          (error) => {
+            console.error("Firebase data read failed:", error);
+            initialDataLoaded = true;
+            firebaseReadError = true;
+            sharedLinks = [];
+            render();
+            refreshConnectionState();
+            showToast(
+              "Firebaseを読み込めません。接続先URLとDatabase Rulesを確認してください。",
+            );
+          },
+        );
+      }
+      function refreshConnectionState() {
+        if (!navigator.onLine || databaseConnected === false) {
+          setConnectionState("offline");
+        } else if (
+          databaseConnected === null ||
+          !initialDataLoaded ||
+          firebaseReadError
+        ) {
+          setConnectionState("syncing");
+        } else {
+          setConnectionState("online");
+        }
       }
       function prettyDate(value) {
         const date = new Date(value);
@@ -1415,7 +1519,6 @@
           fileItems = [];
         }
         render();
-        setConnectionState(navigator.onLine ? "online" : "offline");
       }
 
       function setConnectionState(state) {
@@ -1497,17 +1600,22 @@
               ? "この内容に変更してよろしいですか？"
               : "このURLを登録してよろしいですか？",
             editing ? "変更を確定" : "登録する",
-            () => {
-              const links = readLinks();
-              const index = links.findIndex(
-                (item) => String(item.id) === String(oldId),
-              );
-              if (editing && index >= 0) links[index] = record;
-              else links.push(record);
-              saveLinks(links);
-              closeModal();
-              render();
-              showToast(editing ? "変更を保存しました" : "URLを登録しました");
+            async () => {
+              try {
+                await saveFirebaseLink(record, editing ? oldId : null);
+                closeModal();
+                showToast(
+                  editing
+                    ? "変更をFirebaseに保存しました"
+                    : "URLをFirebaseに登録しました",
+                );
+              } catch (error) {
+                console.error("Firebase save failed:", error);
+                refreshConnectionState();
+                showToast(
+                  "Firebaseへの保存に失敗しました。Database Rulesと接続状態を確認してください。",
+                );
+              }
             },
           );
         }
@@ -1518,15 +1626,18 @@
             "削除の確認",
             `「${item.title}」を削除してよろしいですか？この操作は取り消せません。`,
             "削除する",
-            () => {
-              saveLinks(
-                readLinks().filter(
-                  (link) => String(link.id) !== String(item.id),
-                ),
-              );
-              closeModal();
-              render();
-              showToast("URLを削除しました");
+            async () => {
+              try {
+                await deleteFirebaseLink(item.id);
+                closeModal();
+                showToast("URLをFirebaseから削除しました");
+              } catch (error) {
+                console.error("Firebase delete failed:", error);
+                refreshConnectionState();
+                showToast(
+                  "Firebaseからの削除に失敗しました。Database Rulesと接続状態を確認してください。",
+                );
+              }
             },
             true,
           );
@@ -1542,18 +1653,16 @@
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") closeModal();
       });
-      window.addEventListener("storage", render);
-      window.addEventListener("offline", () => setConnectionState("offline"));
-      window.addEventListener("online", () => setConnectionState("online"));
+      window.addEventListener("offline", refreshConnectionState);
+      window.addEventListener("online", refreshConnectionState);
       (
         navigator.connection ||
         navigator.mozConnection ||
         navigator.webkitConnection
-      )?.addEventListener("change", () =>
-        setConnectionState(navigator.onLine ? "online" : "offline"),
-      );
+      )?.addEventListener("change", refreshConnectionState);
       render();
       loadFiles();
+      subscribeToFirebase();
       window.setTimeout(() => $("#boot").classList.add("done"), 2800);
     </script>
   </body>
