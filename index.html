@@ -3561,6 +3561,8 @@
       }
 
       const CATEGORIES = ["すべて", "家電", "季節AV", "情報", "通信"];
+      // Custom domains can set this to "owner/repository".
+      const GITHUB_REPOSITORY_OVERRIDE = "";
       const ICONS = {
         すべて: "▦",
         家電: "⌂",
@@ -3809,10 +3811,10 @@
       }
       function openFileEditInfo(item) {
         const body = `<div class="form-grid">
-          <p>この資料ファイルはGitHubリポジトリで管理されています。この画面からファイルや登録情報を直接変更することはできません。</p>
+          <p>この資料ファイルはGitHubリポジトリで管理されています。この画面からファイル本体を直接変更することはできません。</p>
           <div class="field"><label>分類</label><div class="share-url">${escapeHtml(item.category)}</div></div>
           <div class="field"><label>ファイルの場所</label><div class="share-url">${escapeHtml(item.url)}</div></div>
-          <p>変更する場合はリポジトリ内のファイルと<code>files/catalog.json</code>を編集してください。</p>
+          <p>変更する場合はリポジトリ内のファイルを差し替えてください。題名や更新日を指定したい場合は<code>files/catalog.json</code>に補助情報を登録できます。</p>
         </div>`;
         openModal(
           "ファイル資料の編集方法",
@@ -3953,35 +3955,123 @@
       }
       async function loadFiles() {
         setConnectionState("syncing");
+        let manifestRows = [];
         try {
-          const response = await fetch("files/catalog.json", {
-            cache: "no-store",
-          });
-          if (!response.ok) throw new Error("catalog unavailable");
-          const rows = await response.json();
-          fileItems = Array.isArray(rows)
-            ? rows
-                .map((row, index) => ({
-                  id: `file-${index}-${row.path}`,
-                  type: "file",
-                  title: row.title || row.path,
-                  category: row.category,
-                  url: `files/${row.category}/${row.path}`,
-                  extension: (
-                    row.path.split(".").pop() || "FILE"
-                  ).toLowerCase(),
-                  updatedAt: row.updatedAt || "",
-                }))
-                .filter(
-                  (item) =>
-                    CATEGORIES.includes(item.category) &&
-                    item.category !== "すべて",
-                )
-            : [];
-        } catch {
-          fileItems = [];
+          const response = await fetch(
+            new URL("files/catalog.json", document.baseURI),
+            { cache: "no-store" },
+          );
+          if (response.ok) {
+            const rows = await response.json();
+            if (Array.isArray(rows)) manifestRows = rows;
+          }
+        } catch (error) {
+          console.warn("File catalog could not be loaded:", error);
+        }
+
+        const metadata = new Map(
+          manifestRows.map((row) => [`${row.category}/${row.path}`, row]),
+        );
+        try {
+          const repo = getGithubRepository();
+          if (!repo) throw new Error("GitHub Pages repository not detected");
+          const response = await fetch(
+            `https://api.github.com/repos/${repo.owner}/${repo.name}/git/trees/HEAD?recursive=1`,
+            { headers: { Accept: "application/vnd.github+json" } },
+          );
+          if (!response.ok)
+            throw new Error(`GitHub API returned ${response.status}`);
+          const tree = await response.json();
+          const basePath = repo.basePath;
+          const discovered = (tree.tree || [])
+            .filter((entry) => entry.type === "blob")
+            .map((entry) => {
+              const match = entry.path.match(
+                /^(?:files\/)?(家電|季節AV|情報|通信)\/(.+)$/,
+              );
+              if (!match || match[2].split("/").pop() === ".gitkeep")
+                return null;
+              const [, category, path] = match;
+              const row = metadata.get(`${category}/${path}`) || {};
+              const encodedPath = entry.path
+                .split("/")
+                .map(encodeURIComponent)
+                .join("/");
+              const filename = path.split("/").pop();
+              return {
+                id: `file-${encodeURIComponent(entry.path)}`,
+                type: "file",
+                title: row.title || filename,
+                category,
+                url: `${basePath}${encodedPath}`,
+                extension: (filename.split(".").pop() || "FILE").toLowerCase(),
+                updatedAt: row.updatedAt || "",
+              };
+            })
+            .filter(Boolean);
+          fileItems = discovered.length
+            ? discovered
+            : makeManifestItems(manifestRows, repo.basePath);
+        } catch (error) {
+          console.warn("GitHub file scan failed; using catalog:", error);
+          const basePath = getGithubRepository()?.basePath || "";
+          fileItems = makeManifestItems(manifestRows, basePath);
+          if (!fileItems.length && manifestRows.length === 0) {
+            showToast(
+              "資料一覧を取得できません。GitHub公開設定とfiles/catalog.jsonを確認してください。",
+            );
+          }
         }
         render();
+      }
+
+      function getGithubRepository() {
+        const segments = location.pathname.split("/").filter(Boolean);
+        if (GITHUB_REPOSITORY_OVERRIDE) {
+          const [owner, name] = GITHUB_REPOSITORY_OVERRIDE.split("/");
+          if (!owner || !name) return null;
+          const basePath =
+            segments[0] === name ? `/${encodeURIComponent(name)}/` : "/";
+          return { owner, name, basePath };
+        }
+        const match = location.hostname.match(/^([^.]+)\.github\.io$/i);
+        if (!match) return null;
+        const owner = match[1];
+        if (segments.length) {
+          const name = segments[0];
+          return {
+            owner,
+            name,
+            basePath: `/${encodeURIComponent(name)}/`,
+          };
+        }
+        return { owner, name: `${owner}.github.io`, basePath: "/" };
+      }
+
+      function makeManifestItems(rows, basePath = "") {
+        return rows
+          .filter(
+            (row) =>
+              row.path &&
+              CATEGORIES.includes(row.category) &&
+              row.category !== "すべて",
+          )
+          .map((row, index) => {
+            const filename = String(row.path).split("/").pop();
+            const encodedPath = String(row.path)
+              .split("/")
+              .map(encodeURIComponent)
+              .join("/");
+            return {
+              id: `file-${index}-${row.category}-${row.path}`,
+              type: "file",
+              title: row.title || filename,
+              category: row.category,
+              url: `${basePath}files/${encodeURIComponent(row.category)}/${encodedPath}`,
+              extension: (filename.split(".").pop() || "FILE").toLowerCase(),
+              updatedAt: row.updatedAt || "",
+            };
+          });
       }
 
       function setConnectionState(state) {
