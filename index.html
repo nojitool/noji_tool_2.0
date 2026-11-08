@@ -169,10 +169,9 @@
       }
       .brand img {
         display: block;
-        width: 124px;
-        max-height: 44px;
+        width: 116px;
+        max-height: 40px;
         object-fit: contain;
-        filter: brightness(0) invert(1);
       }
       .brand-divider {
         width: 1px;
@@ -3989,7 +3988,12 @@
               const match = entry.path.match(
                 /^(?:files\/)?(家電|季節AV|情報|通信)\/(.+)$/,
               );
-              if (!match || match[2].split("/").pop() === ".gitkeep")
+              const filename = match?.[2].split("/").pop() || "";
+              if (
+                !match ||
+                filename === ".gitkeep" ||
+                filename.toLowerCase() === "readme.md"
+              )
                 return null;
               const [, category, path] = match;
               const row = metadata.get(`${category}/${path}`) || {};
@@ -3997,7 +4001,6 @@
                 .split("/")
                 .map(encodeURIComponent)
                 .join("/");
-              const filename = path.split("/").pop();
               return {
                 id: `file-${encodeURIComponent(entry.path)}`,
                 type: "file",
@@ -4053,6 +4056,7 @@
           .filter(
             (row) =>
               row.path &&
+              String(row.path).split("/").pop().toLowerCase() !== "readme.md" &&
               CATEGORIES.includes(row.category) &&
               row.category !== "すべて",
           )
