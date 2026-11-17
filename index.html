@@ -639,26 +639,9 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
-      }
-      .tag-choice {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        min-height: 36px;
-        padding: 0 9px;
-        border: 1px solid #e6ebf2;
-        border-radius: 9px;
-        color: #4d5b71;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      .tag-choice:has(input:checked) {
-        border-color: #c9d5ed;
-        background: #f1f5fd;
-        color: #344f88;
-      }
-      .tag-choice input {
-        accent-color: var(--blue);
+        width: min(304px, 100%);
+        max-height: min(70vh, 520px);
+        overflow-y: auto;
       }
       .date {
         white-space: nowrap;
@@ -852,7 +835,7 @@
         font-size: 12px;
         font-weight: 750;
       }
-      .field input,
+      .field input:not([type="checkbox"]),
       .field select {
         width: 100%;
         height: 45px;
@@ -862,7 +845,7 @@
         border-radius: 10px;
         background: #fff;
       }
-      .field input:focus,
+      .field input:not([type="checkbox"]):focus,
       .field select:focus {
         border-color: #7894cf;
         box-shadow: 0 0 0 3px #163c8912;
@@ -4024,7 +4007,7 @@
         const chosen = new Set(cleanTags(selected));
         return `<div class="field"><span class="filter-heading">関連商品タグ（複数選択可）</span>
           <div class="tag-picker">${PRODUCT_TAGS.map(
-            (tag) => `<label class="tag-choice">
+            (tag) => `<label class="filter-option">
               <input type="checkbox" name="tags" value="${escapeHtml(tag)}" ${chosen.has(tag) ? "checked" : ""} />
               ${escapeHtml(tag)}</label>`,
           ).join("")}</div></div>`;
