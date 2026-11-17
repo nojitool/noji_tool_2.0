@@ -217,6 +217,11 @@
         margin: auto;
       }
       .sidebar {
+        position: sticky;
+        top: 76px;
+        align-self: start;
+        height: calc(100vh - 76px);
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         padding: 34px 20px 24px 28px;
@@ -363,6 +368,8 @@
       }
       .search-wrap {
         position: relative;
+        display: flex;
+        align-items: center;
         margin-bottom: 27px;
       }
       .search-icon {
@@ -377,7 +384,7 @@
       .search {
         width: 100%;
         height: 58px;
-        padding: 0 18px 0 49px;
+        padding: 0 66px 0 49px;
         outline: 0;
         border: 1px solid #e2e7ef;
         border-radius: 15px;
@@ -391,6 +398,110 @@
       }
       .search::placeholder {
         color: #a0a8b5;
+      }
+      .filter-button {
+        position: absolute;
+        right: 9px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-width: 44px;
+        height: 40px;
+        padding: 0 11px;
+        border: 1px solid #e1e7f0;
+        border-radius: 11px;
+        background: #f8faff;
+        color: #435579;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .filter-button:hover,
+      .filter-button[aria-expanded="true"] {
+        border-color: #bdcbea;
+        background: #edf2fb;
+      }
+      .filter-count {
+        display: none;
+        min-width: 18px;
+        height: 18px;
+        place-items: center;
+        padding: 0 4px;
+        border-radius: 99px;
+        background: var(--blue);
+        color: #fff;
+        font-size: 10px;
+      }
+      .filter-count.active {
+        display: inline-grid;
+      }
+      .filter-popover {
+        position: absolute;
+        z-index: 30;
+        top: calc(100% + 8px);
+        right: 0;
+        width: min(340px, calc(100vw - 34px));
+        max-height: min(70vh, 520px);
+        overflow: auto;
+        padding: 18px;
+        border: 1px solid #e4e9f1;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 18px 48px #1a2e501f;
+      }
+      .filter-popover[hidden] {
+        display: none;
+      }
+      .filter-section + .filter-section {
+        margin-top: 17px;
+        padding-top: 15px;
+        border-top: 1px solid #edf0f5;
+      }
+      .filter-heading {
+        margin: 0 0 10px;
+        color: #67748a;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .filter-hint {
+        margin: -4px 0 10px;
+        color: #929caf;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+      .filter-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .filter-option {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 32px;
+        color: #4c5b73;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .filter-option input {
+        accent-color: var(--blue);
+      }
+      .filter-footer {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 14px;
+      }
+      .filter-reset {
+        border: 0;
+        padding: 6px 8px;
+        background: transparent;
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
       }
       .toolbar {
         display: flex;
@@ -506,6 +617,48 @@
         color: #58657b;
         font-size: 10px;
         font-weight: 750;
+      }
+      .product-tags {
+        display: flex;
+        flex: 0 0 100%;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .product-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border: 1px solid #e4eaf5;
+        border-radius: 999px;
+        background: #f5f8fe;
+        color: #53678d;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .tag-picker {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .tag-choice {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 36px;
+        padding: 0 9px;
+        border: 1px solid #e6ebf2;
+        border-radius: 9px;
+        color: #4d5b71;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .tag-choice:has(input:checked) {
+        border-color: #c9d5ed;
+        background: #f1f5fd;
+        color: #344f88;
+      }
+      .tag-choice input {
+        accent-color: var(--blue);
       }
       .date {
         white-space: nowrap;
@@ -903,6 +1056,12 @@
           min-height: calc(100vh - 64px);
         }
         .sidebar {
+          position: sticky;
+          top: 64px;
+          z-index: 15;
+          height: auto;
+          max-height: none;
+          overflow: visible;
           display: block;
           padding: 13px 16px 10px;
           border-right: 0;
@@ -960,6 +1119,15 @@
         }
         .search {
           height: 53px;
+          padding-right: 62px;
+        }
+        .filter-button {
+          right: 7px;
+          height: 37px;
+          padding: 0 8px;
+        }
+        .filter-label {
+          display: none;
         }
         .tool-card {
           grid-template-columns: minmax(0, 1fr);
@@ -1072,6 +1240,58 @@
               placeholder="資料名・キーワードで検索"
               aria-label="資料を検索"
             />
+            <button
+              class="filter-button"
+              id="filterButton"
+              type="button"
+              aria-expanded="false"
+              aria-controls="filterPopover"
+            >
+              <span aria-hidden="true">☷</span>
+              <span class="filter-label">絞り込み</span>
+              <span class="filter-count" id="filterCount"></span>
+            </button>
+            <div class="filter-popover" id="filterPopover" hidden>
+              <section class="filter-section">
+                <h2 class="filter-heading">表示する種類</h2>
+                <div class="filter-options">
+                  <label class="filter-option"
+                    ><input
+                      type="radio"
+                      name="kindFilter"
+                      value="all"
+                      checked
+                    />すべて</label
+                  >
+                  <label class="filter-option"
+                    ><input
+                      type="radio"
+                      name="kindFilter"
+                      value="file"
+                    />資料</label
+                  >
+                  <label class="filter-option"
+                    ><input
+                      type="radio"
+                      name="kindFilter"
+                      value="url"
+                    />ツール</label
+                  >
+                </div>
+              </section>
+              <section class="filter-section">
+                <h2 class="filter-heading">商品タグ（複数選択可）</h2>
+                <p class="filter-hint">
+                  選択したタグのいずれかを含む項目を表示します。
+                </p>
+                <div class="filter-options" id="filterTagOptions"></div>
+              </section>
+              <div class="filter-footer">
+                <button class="filter-reset" id="resetFilters" type="button">
+                  絞り込みを解除
+                </button>
+              </div>
+            </div>
           </div>
           <div class="toolbar">
             <div>
@@ -3549,6 +3769,7 @@
       const firebaseApp = initializeApp(firebaseConfig);
       const database = getDatabase(firebaseApp);
       const sharedToolsRef = ref(database, "sharedTools");
+      const sharedTagsRef = ref(database, "sharedTags");
       const connectionRef = ref(database, ".info/connected");
       try {
         if (await isSupported()) getAnalytics(firebaseApp);
@@ -3560,6 +3781,23 @@
       }
 
       const CATEGORIES = ["すべて", "家電", "季節AV", "情報", "通信"];
+      const PRODUCT_TAGS = [
+        "冷蔵庫",
+        "調理家電",
+        "洗濯機",
+        "美容家電",
+        "照明器具",
+        "クリーナー",
+        "エアコン",
+        "テレビ",
+        "季節家電",
+        "パソコン",
+        "カメラ",
+        "ルーター",
+        "プリンター",
+        "スマホ",
+        "オーディオ",
+      ];
       // Custom domains can set this to "owner/repository".
       const GITHUB_REPOSITORY_OVERRIDE = "";
       const ICONS = {
@@ -3581,6 +3819,9 @@
       let toastTimer;
       let fileItems = [];
       let sharedLinks = [];
+      let sharedFileTags = {};
+      let selectedKind = "all";
+      const selectedTags = new Set();
       let databaseConnected = null;
       let initialDataLoaded = false;
       let firebaseReadError = false;
@@ -3607,12 +3848,48 @@
       function readLinks() {
         return sharedLinks;
       }
+      function cleanTags(value) {
+        const values = Array.isArray(value)
+          ? value
+          : value && typeof value === "object"
+            ? Object.values(value)
+            : [];
+        return [...new Set(values.filter((tag) => PRODUCT_TAGS.includes(tag)))];
+      }
+      function tagStorageKey(item) {
+        if (item.type !== "file") return String(item.id);
+        const source = item.path ? `${item.category}/${item.path}` : item.id;
+        const bytes = new TextEncoder().encode(source);
+        const hex = Array.from(bytes, (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join("");
+        return `file_${hex}`;
+      }
+      async function saveFileTags(item, tags) {
+        setConnectionState("syncing");
+        const key = tagStorageKey(item);
+        if (tags.length) {
+          await set(ref(database, `sharedTags/${key}`), {
+            type: "file",
+            title: item.title,
+            path: `${item.category}/${item.path}`,
+            tags,
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          await remove(ref(database, `sharedTags/${key}`));
+        }
+      }
       async function saveFirebaseLink(record, existingId = null) {
         setConnectionState("syncing");
         const recordRef = existingId
           ? ref(database, `sharedTools/${existingId}`)
           : push(sharedToolsRef);
-        const savedRecord = { ...record, id: recordRef.key };
+        const savedRecord = {
+          ...record,
+          tags: cleanTags(record.tags),
+          id: recordRef.key,
+        };
         await set(recordRef, savedRecord);
         return savedRecord;
       }
@@ -3621,7 +3898,11 @@
         await remove(ref(database, `sharedTools/${id}`));
       }
       function allItems() {
-        return [...fileItems, ...readLinks()];
+        const files = fileItems.map((item) => ({
+          ...item,
+          tags: cleanTags(sharedFileTags[tagStorageKey(item)]?.tags),
+        }));
+        return [...files, ...readLinks()];
       }
       function subscribeToFirebase() {
         onValue(
@@ -3645,6 +3926,7 @@
                 ...item,
                 id: String(key),
                 type: "url",
+                tags: cleanTags(item.tags),
               }))
               .filter(
                 (item) =>
@@ -3667,6 +3949,21 @@
             refreshConnectionState();
             showToast(
               "Firebaseを読み込めません。接続先URLとDatabase Rulesを確認してください。",
+            );
+          },
+        );
+        onValue(
+          sharedTagsRef,
+          (snapshot) => {
+            sharedFileTags = snapshot.val() || {};
+            render();
+          },
+          (error) => {
+            console.error("Firebase file-tag read failed:", error);
+            sharedFileTags = {};
+            render();
+            showToast(
+              "資料タグを読み込めません。Firebase Rulesを確認してください。",
             );
           },
         );
@@ -3707,12 +4004,43 @@
           <span class="nav-count">${count}</span></button>`;
         }).join("");
       }
+      function renderFilterControls() {
+        $("#filterTagOptions").innerHTML = PRODUCT_TAGS.map(
+          (tag) => `<label class="filter-option">
+            <input type="checkbox" value="${escapeHtml(tag)}" ${selectedTags.has(tag) ? "checked" : ""} />
+            ${escapeHtml(tag)}</label>`,
+        ).join("");
+        document
+          .querySelectorAll('input[name="kindFilter"]')
+          .forEach((input) => {
+            input.checked = input.value === selectedKind;
+          });
+        const activeCount =
+          (selectedKind === "all" ? 0 : 1) + selectedTags.size;
+        $("#filterCount").textContent = activeCount || "";
+        $("#filterCount").classList.toggle("active", activeCount > 0);
+      }
+      function tagPicker(selected = []) {
+        const chosen = new Set(cleanTags(selected));
+        return `<div class="field"><span class="filter-heading">関連商品タグ（複数選択可）</span>
+          <div class="tag-picker">${PRODUCT_TAGS.map(
+            (tag) => `<label class="tag-choice">
+              <input type="checkbox" name="tags" value="${escapeHtml(tag)}" ${chosen.has(tag) ? "checked" : ""} />
+              ${escapeHtml(tag)}</label>`,
+          ).join("")}</div></div>`;
+      }
       function getVisibleItems() {
         const query = normalized($("#search").value.trim());
         let items = allItems().filter(
           (item) =>
             selectedCategory === "すべて" || item.category === selectedCategory,
         );
+        if (selectedKind !== "all")
+          items = items.filter((item) => item.type === selectedKind);
+        if (selectedTags.size)
+          items = items.filter((item) =>
+            cleanTags(item.tags).some((tag) => selectedTags.has(tag)),
+          );
         if (query)
           items = items.filter((item) =>
             normalized(item.title).includes(query),
@@ -3727,11 +4055,12 @@
       }
       function render() {
         renderCategories();
+        renderFilterControls();
         const items = getVisibleItems();
         $("#resultsTitle").textContent =
           selectedCategory === "すべて"
-            ? "すべてのツール"
-            : `${selectedCategory}のツール`;
+            ? "すべての資料・ツール"
+            : `${selectedCategory}の資料・ツール`;
         $("#resultCount").textContent = `${items.length} 件`;
         $("#toolList").innerHTML = items
           .map((item, index) => {
@@ -3748,6 +4077,16 @@
             <span class="tag">${escapeHtml(item.category)}</span>
             <span class="tool-kind">${isFile ? `${escapeHtml(ext)} ファイル` : "Webサイト"}</span>
             <span class="date">更新 ${escapeHtml(prettyDate(item.updatedAt))}</span>
+            ${
+              cleanTags(item.tags).length
+                ? `<span class="product-tags">${cleanTags(item.tags)
+                    .map(
+                      (tag) =>
+                        `<span class="product-tag">${escapeHtml(tag)}</span>`,
+                    )
+                    .join("")}</span>`
+                : ""
+            }
           </div></div>
           <div class="card-actions">
             <button class="action" data-action="edit" data-id="${escapeHtml(item.id)}">編集</button>
@@ -3762,8 +4101,8 @@
         const empty = items.length === 0;
         $("#emptyState").classList.toggle("show", empty);
         $("#emptyTitle").textContent = $("#search").value.trim()
-          ? "一致するツールがありません"
-          : "ツールはまだありません";
+          ? "一致する資料・ツールがありません"
+          : "資料・ツールはまだありません";
         $("#emptyText").textContent = $("#search").value.trim()
           ? "別のキーワードで検索するか、カテゴリを切り替えてください。"
           : "「URLを新規追加」からWebツールを登録するか、READMEの手順で資料ファイルを追加してください。";
@@ -3802,6 +4141,7 @@
           <input id="linkUrl" name="url" type="url" required value="${escapeHtml(item?.url || "")}" placeholder="https://example.com"></div>
         <div class="field"><label for="linkCategory">ラベル</label>
           <select id="linkCategory" name="category">${categoryOptions(item?.category || "家電")}</select></div>
+        ${tagPicker(item?.tags || [])}
       </form>`;
         const footer = `${editing ? '<button class="action danger" id="deleteLink">削除</button>' : ""}
         <button class="action" id="cancelModal">キャンセル</button>
@@ -3809,16 +4149,16 @@
         openModal(editing ? "URLを編集" : "Webツールを追加", body, footer);
       }
       function openFileEditInfo(item) {
-        const body = `<div class="form-grid">
-          <p>この資料ファイルはGitHubリポジトリで管理されています。この画面からファイル本体を直接変更することはできません。</p>
-          <div class="field"><label>分類</label><div class="share-url">${escapeHtml(item.category)}</div></div>
-          <div class="field"><label>ファイルの場所</label><div class="share-url">${escapeHtml(item.url)}</div></div>
-          <p>変更する場合はリポジトリ内のファイルを差し替えてください。題名や更新日を指定したい場合は<code>files/catalog.json</code>に補助情報を登録できます。</p>
-        </div>`;
+        activeModalItem = item;
+        const body = `<form class="form-grid" id="fileTagForm">
+          <p>資料本体はGitHubリポジトリで管理されています。ここではこの資料に関連する商品タグを設定できます。タグはFirebaseを通じて全端末に共有されます。</p>
+          <div class="field"><label>資料名</label><div class="share-url">${escapeHtml(item.title)}</div></div>
+          ${tagPicker(item.tags || [])}
+        </form>`;
         openModal(
-          "ファイル資料の編集方法",
+          "資料の商品タグを編集",
           body,
-          '<button class="action primary" id="cancelModal">閉じる</button>',
+          '<button class="action" id="cancelModal">キャンセル</button><button class="action primary" id="saveFileTags">タグを保存</button>',
         );
       }
       function showToast(message) {
@@ -4006,6 +4346,7 @@
                 type: "file",
                 title: row.title || filename,
                 category,
+                path,
                 url: `${basePath}${encodedPath}`,
                 extension: (filename.split(".").pop() || "FILE").toLowerCase(),
                 updatedAt: row.updatedAt || "",
@@ -4071,6 +4412,7 @@
               type: "file",
               title: row.title || filename,
               category: row.category,
+              path: String(row.path),
               url: `${basePath}files/${encodeURIComponent(row.category)}/${encodedPath}`,
               extension: (filename.split(".").pop() || "FILE").toLowerCase(),
               updatedAt: row.updatedAt || "",
@@ -4139,6 +4481,31 @@
         selectedCategory = button.dataset.category;
         render();
       });
+      $("#filterButton").addEventListener("click", () => {
+        const popover = $("#filterPopover");
+        const opening = popover.hidden;
+        popover.hidden = !opening;
+        $("#filterButton").setAttribute("aria-expanded", String(opening));
+      });
+      $("#filterPopover").addEventListener("change", (event) => {
+        const input = event.target;
+        if (input.name === "kindFilter") selectedKind = input.value;
+        if (input.type === "checkbox" && PRODUCT_TAGS.includes(input.value)) {
+          if (input.checked) selectedTags.add(input.value);
+          else selectedTags.delete(input.value);
+        }
+        render();
+      });
+      $("#resetFilters").addEventListener("click", () => {
+        selectedKind = "all";
+        selectedTags.clear();
+        render();
+      });
+      document.addEventListener("click", (event) => {
+        if (event.target.closest(".search-wrap")) return;
+        $("#filterPopover").hidden = true;
+        $("#filterButton").setAttribute("aria-expanded", "false");
+      });
       $("#search").addEventListener("input", render);
       $("#sortSelect").addEventListener("change", render);
       $("#homeLink").addEventListener("click", () => {
@@ -4182,6 +4549,7 @@
             title: String(data.get("title")).trim(),
             url,
             category: data.get("category"),
+            tags: cleanTags(data.getAll("tags")),
             updatedAt: new Date().toISOString(),
           };
           askConfirmation(
@@ -4204,6 +4572,34 @@
                 refreshConnectionState();
                 showToast(
                   "Firebaseへの保存に失敗しました。Database Rulesと接続状態を確認してください。",
+                );
+              }
+            },
+          );
+        }
+        if (event.target.closest("#saveFileTags")) {
+          const item = activeModalItem;
+          const form = $("#fileTagForm");
+          if (!item || !form) return;
+          const tags = cleanTags(
+            [...form.querySelectorAll('input[name="tags"]:checked')].map(
+              (input) => input.value,
+            ),
+          );
+          askConfirmation(
+            "タグ変更の確認",
+            `「${item.title}」の商品タグを更新してよろしいですか？他の端末にも反映されます。`,
+            "タグを保存",
+            async () => {
+              try {
+                await saveFileTags(item, tags);
+                closeModal();
+                showToast("資料タグをFirebaseに保存しました");
+              } catch (error) {
+                console.error("Firebase file-tag save failed:", error);
+                refreshConnectionState();
+                showToast(
+                  "資料タグを保存できませんでした。Firebase Rulesと接続状態を確認してください。",
                 );
               }
             },
